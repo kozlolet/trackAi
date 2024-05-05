@@ -1,0 +1,172 @@
+import tkinter as tk
+import random
+import threading
+import time
+import math
+
+# Инициализация глобальных переменных
+SCREEN_WIDTH = 600
+SCREEN_HEIGHT = 800
+PLAYER_WIDTH = 50
+PLAYER_HEIGHT = 80
+ENEMY_WIDTH = 50
+ENEMY_HEIGHT = 80
+ENEMY_SPEED = 5
+NUM_CLOSEST_ENEMIES = 4
+
+flag = 0
+
+# Функция для перемещения игрока влево
+def move_left(event):
+    x = canvas.coords(player)[0]
+    if x > 0:
+        canvas.move(player, -10, 0)
+
+# Функция для перемещения игрока вправо
+def move_right(event):
+    x = canvas.coords(player)[0]
+    if x < SCREEN_WIDTH - PLAYER_WIDTH:
+        canvas.move(player, 10, 0)
+
+# Функция для создания машины-врага
+def create_enemy():
+    while True:
+        x = random.randint(0, SCREEN_WIDTH - ENEMY_WIDTH)
+        y = random.randint(-100, -40)
+
+        enemy = canvas.create_rectangle(x, y, x + ENEMY_WIDTH, y + ENEMY_HEIGHT, fill="black")
+        time.sleep(1)  # Задержка перед созданием следующей машины
+        enemies.append(enemy)
+
+# Функция для обновления позиции машины-врага
+def update_enemies():
+    for enemy in enemies:
+        canvas.move(enemy, 0, ENEMY_SPEED)
+        if canvas.coords(enemy)[1] > SCREEN_HEIGHT:
+            canvas.delete(enemy)
+            enemies.remove(enemy)
+
+# Функция для проверки столкновений между игроком и машинами-врагами
+def check_collision():
+    player_coords = canvas.coords(player)
+    player_left = player_coords[0]
+    player_right = player_coords[2]
+    player_top = player_coords[1]
+    player_bottom = player_coords[3]
+
+    for enemy in enemies:
+        enemy_coords = canvas.coords(enemy)
+        enemy_left = enemy_coords[0]
+        enemy_right = enemy_coords[2]
+        enemy_top = enemy_coords[1]
+        enemy_bottom = enemy_coords[3]
+
+        # Проверка на пересечение прямоугольников игрока и машины-врага
+        if (player_left < enemy_right and player_right > enemy_left and
+                player_top < enemy_bottom and player_bottom > enemy_top):
+            return True
+
+    return False
+
+# Функция для нахождения ближайших машин к игроку
+def find_closest_enemies():
+    player_coords = canvas.coords(player)
+    player_center_x = (player_coords[0] + player_coords[2]) / 2
+    player_center_y = (player_coords[1] + player_coords[3]) / 2
+
+    distances = []
+
+    for i in enemies:
+        enemy_coords = canvas.coords(i)
+        enemy_center_x = (enemy_coords[0] + enemy_coords[2]) / 2
+        enemy_center_y = (enemy_coords[1] + enemy_coords[3]) / 2
+
+        # Вычисление расстояния между игроком и машиной-врагом
+        distance = math.sqrt((player_center_x - enemy_center_x)**2 + (player_center_y - enemy_center_y)**2)
+        distances.append((distance, i))
+
+    # Сортировка машин-врагов по расстоянию до игрока и выбор ближайших
+    distances.sort()
+    closest_enemies = [enemy for _, enemy in distances[:NUM_CLOSEST_ENEMIES]]
+
+    return closest_enemies
+
+def create_first_heaves():
+    Heaves = []
+    for i in range(NUM_CLOSEST_ENEMIES):
+        heaves = []
+
+        heave1 = random.uniform(1, -1)
+        heave2 = random.uniform(1, -1)
+        heaves.append(heave1)
+        heaves.append(heave2)
+        Heaves.append(heaves)
+
+    heaves = []
+
+    heave1 = random.uniform(1, -1)
+    heave2 = random.uniform(1, -1)
+    heaves.append(heave1)
+    heaves.append(heave2)
+
+    Heaves.append(heaves)
+    print(Heaves)
+
+
+
+##################################################
+##################################################
+##################################################
+
+
+
+# Создание окна игры
+root = tk.Tk()
+root.title("Обгони машины!")
+canvas = tk.Canvas(root, width=SCREEN_WIDTH, height=SCREEN_HEIGHT, bg="white")
+canvas.pack()
+
+# Создание игрока
+player = canvas.create_rectangle(SCREEN_WIDTH // 2 - PLAYER_WIDTH // 2, SCREEN_HEIGHT - 120,
+                                 SCREEN_WIDTH // 2 + PLAYER_WIDTH // 2, SCREEN_HEIGHT - 40, fill="red")
+
+# Добавление управления для игрока
+root.bind("<Left>", move_left)
+root.bind("<Right>", move_right)
+
+# Создание списка для хранения потоков машин-врагов
+enemies = []
+
+# Запуск потока для создания машин-врагов
+enemy_thread = threading.Thread(target=create_enemy)
+enemy_thread.daemon = True
+enemy_thread.start()
+
+create_first_heaves()
+
+# Основной игровой цикл
+def game_loop():
+    update_enemies()
+    if check_collision():
+        print('Game Over! Collision Detected.')
+        root.destroy()
+        return
+
+    coords = []
+    closest_enemies = find_closest_enemies()
+    for i in range(len(closest_enemies)):
+        coord = canvas.coords(closest_enemies[i])
+
+        coord1 = []
+        coord1.append(coord[1])
+        coord1.append(coord[3])
+
+        coords.append(coord1)
+    # print(coords)
+
+    root.after(50, game_loop)
+
+
+
+game_loop()
+root.mainloop()
